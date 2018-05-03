@@ -112,7 +112,7 @@ get_poses_and_dists(PartPosesAndDists) :-
 perform_action(ActionDescription, Result) :-
 %% perform_put_away(ActionDescription, Result) :-
   %% =(ActionDescription, ["an", "action", ["type", "putting_part_away"], ["mobile-part", MobilePart]]),
-  owl_type_of(ActionDescription, knowrob_assembly:'PutAwayPart'),
+  rdfs_type_of(ActionDescription, knowrob_assembly:'PutAwayPart'),
   rdf_has(ActionDescription, knowrob_assembly:'movePart', MobilePart),
   free_grasping_affordance(MobilePart, GraspingAffordance),
   rdf_has(GraspingAffordance, knowrob_assembly:'graspAt', GraspSpecification),
