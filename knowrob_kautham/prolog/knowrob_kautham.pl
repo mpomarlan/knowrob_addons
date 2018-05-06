@@ -35,7 +35,8 @@
         kautham_init_planning_scene/2,
         kautham_grab_part/4,
         kautham_put_part/5,
-        perform_action/2
+        perform_action/2,
+        kautham_planner_run/0
     ]).
 
 
@@ -49,12 +50,15 @@
 :- use_module(library('knowrob/beliefstate')).
 :- use_module(library('knowrob/transforms')).
 :- use_module(library('knowrob_assembly')).
+:- use_module(library('knowrob_planning')).
 
 :- rdf_db:rdf_register_ns(knowrob, 'http://knowrob.org/kb/knowrob.owl#', [keep(true)]).
 :- rdf_db:rdf_register_ns(knowrob_kautham, 'http://knowrob.org/kb/knowrob_kautham.owl#', [keep(true)]).
 :- rdf_db:rdf_register_ns(knowrob_assembly, 'http://knowrob.org/kb/knowrob_assembly.owl#', [keep(true)]).
 :- rdf_db:rdf_register_ns(srdl2comp, 'http://knowrob.org/kb/srdl2-comp.owl#', [keep(true)]).
 :- rdf_db:rdf_register_ns(knowrob_paramserver, 'http://knowrob.org/kb/knowrob_paramserver.owl#', [keep(true)]).
+:- rdf_db:rdf_register_prefix(battat_toys, 'http://knowrob.org/kb/battat_toys.owl#', [keep(true)]).
+:- rdf_db:rdf_register_prefix(battat_strategy, 'http://knowrob.org/kb/battat_strategy.owl#', [keep(true)]).
 
 :-  rdf_meta
   comp_affordanceocclusion(?, r, r),
@@ -62,9 +66,20 @@
   kautham_grab_part(r, r, r, ?),
   kautham_put_part(r, r, r, r, ?).
 
+% calling this will run the planner, and block until its done.
+% hopefully, in the mean time the geometric reasoner was invoked, etc.
+kautham_planner_run :-
+  owl_instance_from_class(battat_toys:'BattatPlaneBodyWithoutWindow', Assemblage),
+  agenda_create(Assemblage, battat_strategy:'AgendaStrategy_1', Agenda),
+  % this prints the initial planning agenda
+  agenda_write(Agenda),
+  test_perform_agenda_cram(Agenda).
+test_perform_agenda_cram(Agenda) :-
+  (agenda_perform_next(Agenda) -> test_perform_agenda_cram(Agenda) ; true).
+
 battat_initialize_kautham_sim :- 
   owl_parser:owl_parse('package://knowrob_kautham/owl/battat_toys.owl'),
-  owl_parser:owl_parse('package://knowrob_kautham/owl/battat_airplane_test.owl', belief_state).
+  owl_parser:owl_parse('package://knowrob_kautham/owl/battat_strategy_kautham.owl', belief_state).
 %%  owl_parser:owl_parse('package://knowrob_kautham/owl/battat_airplane_simulation.owl').
 
 free_grasping_affordance(MobilePart, GraspingAffordance) :-
@@ -112,8 +127,10 @@ get_poses_and_dists(PartPosesAndDists) :-
 perform_action(ActionDescription, Result) :-
 %% perform_put_away(ActionDescription, Result) :-
   %% =(ActionDescription, ["an", "action", ["type", "putting_part_away"], ["mobile-part", MobilePart]]),
-  rdfs_type_of(ActionDescription, knowrob_assembly:'PutAwayPart'),
-  rdf_has(ActionDescription, knowrob_assembly:'movePart', MobilePart),
+  rdfs_individual_of(ActionDescription, knowrob_assembly:'PutAwayPart'),!,
+  writeln('Kautham perform PutAwayPart...'),
+  % TODO: do not ignore knowrob:'avoidedObject'
+  rdf_has(ActionDescription, knowrob:'movedObject', MobilePart),
   free_grasping_affordance(MobilePart, GraspingAffordance),
   rdf_has(GraspingAffordance, knowrob_assembly:'graspAt', GraspSpecification),
   grasppose(MobilePart, GraspSpecification, [PTx, PTy, PTz, PRx, PRy, PRz, PRw]),
@@ -132,7 +149,8 @@ perform_action(ActionDescription, Result) :-
 perform_action(ActionDescription, Result) :-
 %% perform_assembly_action(ActionDescription, Result) :-
   %% =(ActionDescription, ["an", "action", ["type", "connecting"], ["connection", Connection], ["fixed-part", _], ["mobile-part", MobilePart]]),
-  rdfs_type_of(ActionDescription, knowrob_assembly:'ConnectingParts'),
+  rdfs_individual_of(ActionDescription, knowrob_assembly:'ConnectingParts'), !,
+  writeln('Kautham perform ConnectingParts...'),
   rdf_has(ActionDescription, knowrob_assembly:'mobilePart', MobilePart),
   rdf_has(ActionDescription, knowrob_assembly:'assembledConnection', Connection),
   assemblage_possible_grasp(MobilePart, Connection, [GraspPart, GraspingAffordance, GraspSpecification]),
