@@ -83,10 +83,10 @@ battat_initialize_kautham_sim :-
 %%  owl_parser:owl_parse('package://knowrob_kautham/owl/battat_airplane_simulation.owl').
 
 free_grasping_affordance(MobilePart, GraspingAffordance) :-
-  owl_has(MobilePart, knowrob_assembly:'hasAffordance', GraspingAffordance),
-  owl_individual_of(GraspingAffordance, knowrob_assembly:'GraspingAffordance'),
-  \+ rdf_has(_, knowrob_assembly:'blocksAffordance', GraspingAffordance),
-  \+ holds(_, knowrob_assembly:'blocksAffordance', GraspingAffordance).
+  owl_has(MobilePart, knowrob:'hasAffordance', GraspingAffordance),
+  owl_individual_of(GraspingAffordance, knowrob:'GraspingAffordance'),
+  \+ rdf_has(_, knowrob:'blocksAffordance', GraspingAffordance),
+  \+ holds(_, knowrob:'blocksAffordance', GraspingAffordance).
 
 grasppose(MobilePart, GraspSpecification, [PTx, PTy, PTz, PRx, PRy, PRz, PRw]) :-
   belief_at_global(MobilePart, [_, _, [OTx, OTy, OTz], [ORx, ORy, ORz, ORw]]),
@@ -101,7 +101,7 @@ arm_available([PTx, PTy, PTz, PRx, PRy, PRz, PRw], "right") :-
   kautham_call_yumi_ik("right", [PTx, PTy, PTz, PRx, PRy, PRz, PRw], Conf),
   \+ =([], Conf).
 
-get_connection_transform(Connection, [CTx, CTy, CTz, CRx, CRy, CRz, CRw], ReferenceObj) :-
+get_connection_transform(Connection, [CTx, CTy, CTz, CRx, CRy, CRz, CRw], ConnectionTransform, ReferenceObj) :-
   once(owl_has(Connection, knowrob_assembly:'usesTransform', ConnectionTransform)),
   assemblage_connection_reference(Connection, ConnectionTransform, ReferenceObj), 
   rdf_has(ConnectionTransform, knowrob:'translation', literal(type(_, ConnectionTranslation))),
@@ -111,12 +111,12 @@ get_connection_transform(Connection, [CTx, CTy, CTz, CRx, CRy, CRz, CRw], Refere
 
 put_away_manips(GraspingAffordance, GraspSpecification, PartGlobalTargetPose, ArmName, Result) :-
   kautham_grab_part(GraspingAffordance, GraspSpecification, ArmName, GrabResult),
-  (=("ok", GrabResult) -> 
+  (=('ok', GrabResult) -> 
     kautham_put_part(GraspingAffordance, GraspSpecification, PartGlobalTargetPose, ArmName, Result);
     =(GrabResult, Result)).
 
 get_pose_and_dist([Tx, Ty, Tz, Rx, Ry, Rz, Rw, D]) :-
-  owl_instance_of(Part, knowrob_assembly:'AtomicPart'),
+  owl_individual_of(Part, knowrob_assembly:'AtomicPart'),
   belief_at_global(Part, [_, _, [Tx, Ty, Tz], [Rx, Ry, Rz, Rw]]),
   %%%%%% Add dist to the rep.
   =(D, 0.15).
@@ -127,7 +127,7 @@ get_poses_and_dists(PartPosesAndDists) :-
 perform_action(ActionDescription, Result) :-
 %% perform_put_away(ActionDescription, Result) :-
   %% =(ActionDescription, ["an", "action", ["type", "putting_part_away"], ["mobile-part", MobilePart]]),
-  rdfs_individual_of(ActionDescription, knowrob_assembly:'PutAwayPart'),!,
+  rdfs_type_of(ActionDescription, knowrob_assembly:'PutAwayPart'),!,
   writeln('Kautham perform PutAwayPart...'),
   % TODO: do not ignore knowrob:'avoidedObject'
   rdf_has(ActionDescription, knowrob:'movedObject', MobilePart),
@@ -141,30 +141,30 @@ perform_action(ActionDescription, Result) :-
   get_poses_and_dists(PartPosesAndDists),
   get_grasp_transform(GraspSpecification, [GTx, GTy, GTz, GRx, GRy, GRz, GRw]),
   kautham_find_away_pose(ArmName, TableLimits, PartHeight, [GTx, GTy, GTz, GRx, GRy, GRz, GRw], [PRx, PRy, PRz, PRw], PartPosesAndDists, PartGlobalTargetPose, FindResult),
-  ((=("ok", FindResult) ->
+  ((=('ok', FindResult) ->
     put_away_manips(GraspingAffordance, GraspSpecification, PartGlobalTargetPose, ArmName, Result);
     =(FindResult, Result))),
-  =("ok", Result).
+  =('ok', Result).
 
 perform_action(ActionDescription, Result) :-
 %% perform_assembly_action(ActionDescription, Result) :-
   %% =(ActionDescription, ["an", "action", ["type", "connecting"], ["connection", Connection], ["fixed-part", _], ["mobile-part", MobilePart]]),
-  rdfs_individual_of(ActionDescription, knowrob_assembly:'ConnectingParts'), !,
+  rdfs_type_of(ActionDescription, knowrob_assembly:'ConnectingParts'), !,
   writeln('Kautham perform ConnectingParts...'),
   rdf_has(ActionDescription, knowrob_assembly:'mobilePart', MobilePart),
   rdf_has(ActionDescription, knowrob_assembly:'assembledConnection', Connection),
   assemblage_possible_grasp(MobilePart, Connection, [GraspPart, GraspingAffordance, GraspSpecification]),
   grasppose(GraspPart, GraspSpecification, [PTx, PTy, PTz, PRx, PRy, PRz, PRw]),
   arm_available([PTx, PTy, PTz, PRx, PRy, PRz, PRw], ArmName),
-  get_connection_transform(Connection, [CTx, CTy, CTz, CRx, CRy, CRz, CRw], ReferenceObj),
+  get_connection_transform(Connection, [CTx, CTy, CTz, CRx, CRy, CRz, CRw], TransformId, ReferenceObj),
   belief_at_global(ReferenceObj, [_, _, [OTx, OTy, OTz], [ORx, ORy, ORz, ORw]]),
   transform_multiply(["map", "fixedpart", [OTx, OTy, OTz], [ORx, ORy, ORz, ORw]], ["fixedpart", "mobilepart", [CTx, CTy, CTz], [CRx, CRy, CRz, CRw]], [_, _, [PTx, PTy, PTz], [PRx, PRy, PRz, PRw]]),
   =(PartGlobalTargetPose, [[PTx, PTy, PTz], [PRx, PRy, PRz, PRw]]),
   kautham_grab_part(GraspingAffordance, GraspSpecification, ArmName, GrabResult),
-  ((=("ok", GrabResult) -> 
+  ((=('ok', GrabResult) -> 
     kautham_put_part(GraspingAffordance, GraspSpecification, PartGlobalTargetPose, ArmName, Result);
     =(GrabResult, Result))),
-  =("ok", Result).
+  =('ok', Result).
 
 get_grasp_transform(GraspSpecification, [GTx, GTy, GTz, GRx, GRy, GRz, GRw]) :-
   rdf_has(GraspSpecification, knowrob_paramserver:'hasGraspTransform', GraspTransform),
@@ -180,7 +180,7 @@ comp_affordanceocclusion(Part, GraspingAffordance, ArmName) :-
   rdf_has(GraspingAffordance, knowrob_assembly:'graspAt', GraspSpecification),
   get_grasp_transform(GraspSpecification, [GTx, GTy, GTz, GRx, GRy, GRz, GRw]),
 % Retrieve TargetPart (associated to GraspingAffordance)
-  rdf_has(TargetPart, knowrob_assembly:'hasAffordance', GraspingAffordance),
+  rdf_has(TargetPart, knowrob:'hasAffordance', GraspingAffordance),
 % Retrieve pose associated to TargetPart
   belief_at_global(TargetPart, [_, _, [OTx, OTy, OTz], [ORx, ORy, ORz, ORw]]),
 % Call helper program: give transform to TargetPart, return a list of colliding bodies (represented as indices in planning scene)
@@ -201,21 +201,101 @@ kautham_init_planning_scene(ModelFolder, SceneMap) :-
   kautham_init_planning_scene_internal(ModelFolder, SceneMap),
   findall(Part, (owl_individual_of(Part, knowrob_assembly:'AtomicPart')), PartList),
   list_to_set(PartList, Parts),
-  findall([Part, Mesh, Pose], (member(Part, Parts), part_data(Part, Mesh, Pose)), PartData),
+  findall([Part, Mesh, Pose], (member(Part, Parts), part_data(Part, Mesh, Pose)), PartDataList),
+  list_to_set(PartDataList, PartData),
   kautham_add_obstacles_internal(PartData, Indices),
   maplist(assert_part_index, Indices).
 
 kautham_grab_part(GraspingAffordance, GraspSpecification, ArmName, Result) :-
-  rdf_has(Part, knowrob_assembly:'hasAffordance', GraspingAffordance),
+  (=('left', ArmName) ->
+    =('http://knowrob.org/kb/battat_airplane_simulation.owl#LeftYumiGripper', Gripper) ; =('http://knowrob.org/kb/battat_airplane_simulation.owl#RightYumiGripper', Gripper)),
+  rdf_has(Part, knowrob:'hasAffordance', GraspingAffordance),
   belief_at_global(Part, [_, _, [TTx, TTy, TTz], [TRx, TRy, TRz, TRw]]),
   get_grasp_transform(GraspSpecification, [GTx, GTy, GTz, GRx, GRy, GRz, GRw]),
   rdf_has(Part, knowrob_kautham:'planningSceneIndex', literal(type(_, ObjectIndex))),
-  kautham_grab_part_internal([TTx, TTy, TTz, TRx, TRy, TRz, TRw], [GTx, GTy, GTz, GRx, GRy, GRz, GRw], ObjectIndex, ArmName, Result).
+  once(kautham_grab_part_internal([TTx, TTy, TTz, TRx, TRy, TRz, TRw], [GTx, GTy, GTz, GRx, GRy, GRz, GRw], ObjectIndex, ArmName, Result)), !,
+  (=('ok', Result) ->
+    once(kautham_assembly_apply_grasp(Part, Gripper, GraspSpecification)),
+    true
+   ; true).
 
 kautham_put_part(GraspingAffordance, GraspSpecification, PartGlobalTargetPose, ArmName, Result) :-
-  rdf_has(Part, knowrob_assembly:'hasAffordance', GraspingAffordance),
+  (=('left', ArmName) ->
+    =('http://knowrob.org/kb/battat_airplane_simulation.owl#LeftYumiGripper', Gripper) ; =('http://knowrob.org/kb/battat_airplane_simulation.owl#RightYumiGripper', Gripper)),
+  rdf_has(Part, knowrob:'hasAffordance', GraspingAffordance),
   =(PartGlobalTargetPose, [[TTx, TTy, TTz], [TRx, TRy, TRz, TRw]]),
   get_grasp_transform(GraspSpecification, [GTx, GTy, GTz, GRx, GRy, GRz, GRw]),
   rdf_has(Part, knowrob_kautham:'planningSceneIndex', literal(type(_, ObjectIndex))),
-  kautham_put_part_internal([TTx, TTy, TTz, TRx, TRy, TRz, TRw], [GTx, GTy, GTz, GRx, GRy, GRz, GRw], ObjectIndex, ArmName, Result).
+  once(kautham_put_part_internal([TTx, TTy, TTz, TRx, TRy, TRz, TRw], [GTx, GTy, GTz, GRx, GRy, GRz, GRw], ObjectIndex, ArmName, Result)), !,
+  (=('ok', Result) ->
+    kautham_assembly_apply_ungrasp(Part, Gripper, GraspSpecification) ; true).
+
+kautham_assembly_apply_grasp(GraspedObject, Gripper, GraspSpec) :-
+  format("APPLY-GRASP~n"),
+  ground(GraspedObject), ground(Gripper), 
+  format(" ... grounded~n    ~a~n    ~a~n", [GraspedObject, Gripper]),
+  once((
+    rdf_has(GraspedObject, knowrob:'hasAffordance', GraspedAffordance),
+    owl_has(GraspedAffordance, knowrob_assembly:'graspAt', GraspSpec)
+  )),
+  format("    ~a~n", [GraspSpec]),
+  assemblage_mechanical_part(GraspedObject),
+  rdf_has(Gripper, knowrob:'frameName', literal(_)),
+  format(" passed some checks~n"),
+  %%%%
+  rdf_has(GraspSpec, knowrob_paramserver:'hasGraspTransform', TransformId),
+  transform_data(TransformId, TransformData),
+  % retract connections to fixed objects
+  assemblage_remove_fixtures(GraspedObject),
+  % there could be objects with transforms not connected to GraspedObject.
+  % find the physical bridges to tf unconnected objects and make
+  % tf unconnected objects transforms relative to the bridge.
+  findall(X, assemblage_part_connect_transforms(GraspedObject, X), DirtyUnconnected),
+  format("    ~w~n", [DirtyUnconnected]),
+  % invert the transform topology along the parent frame relation.
+  % GraspedObject is then reference of all phsically connected parts
+  assemblage_part_make_reference(GraspedObject, Parents),
+  format(" Parents from make reference~n    ~w~n", [Parents]),
+  % apply grasp transform on grasped object
+  belief_at_internal(GraspedObject, TransformData, Gripper),
+  % accumulate list of dirty objects and cause beliefstate to republich TF frames
+  findall(X, ( member(X, [GraspedObject|Parents]) ;
+    ( member(List, DirtyUnconnected), member(X,List) )), Dirty),
+  format(" Dirty~n    ~w~n", [Dirty]),
+  belief_republish_objects(Dirty),
+  % assert temporary connections that consume affordances blocked by the grasp
+  kautham_assembly_block_grasp_affordances(GraspedObject, GraspedAffordance, GraspSpec).
+
+kautham_assembly_apply_ungrasp(GraspedObject, Gripper, GraspSpec) :-
+  %%%% input checking
+  ground(GraspedObject), ground(Gripper), ground(GraspSpec),
+  assemblage_mechanical_part(GraspedObject),
+  rdf_has(Gripper, knowrob:'frameName', literal(_)),
+  format("APPLY-UNGRASP~n"),
+  format(" ... grounded~n    ~a~n    ~a~n", [GraspedObject, Gripper]),
+  format("    ~a~n", [GraspSpec]),
+  %%%%
+  % make GraspedObject absolute if still relative to gripper
+  rdf_has(GraspedObject, knowrob_paramserver:'hasTransform', TransformId),
+  ( rdf_has(TransformId, knowrob:'relativeTo', Gripper) -> (
+format("Clear griprel transform"),
+    rdf_has(GraspedObject, knowrob:'frameName', literal(ObjFrame)),
+format("  ~a~n", ObjFrame),
+    % FIXME: hardcoded map frame name
+    get_current_tf('map', ObjFrame, Tx,Ty,Tz, Rx,Ry,Rz,Rw),
+    belief_at_update(GraspedObject, ([Tx,Ty,Tz], [Rx,Ry,Rz,Rw]))
+  ) ; true ),
+  % retract temporary connections that consume affordances blocked by the grasp
+  kautham_assembly_unblock_grasp_affordances(GraspedObject, GraspedAffordance, GraspSpec).
+
+kautham_assembly_block_grasp_affordances(GraspedObject, GraspedAffordance, GraspSpec) :-
+  % block the affordance that is grasped
+  rdf_instance_from_class(knowrob_assembly:'GraspingConnection', GraspConnection),
+  format(" New individual ~a~n", [GraspConnection]),
+  rdf_assert(GraspConnection, knowrob_assembly:'consumesAffordance', GraspedAffordance).
+
+kautham_assembly_unblock_grasp_affordances(GraspedObject, GraspedAffordance, GraspSpec) :-
+  rdf_has(GraspConnection, knowrob_assembly:'consumesAffordance', GraspedAffordance),
+  rdfs_individual_of(GraspConnection, knowrob_assembly:'GraspingConnection'),
+  rdf_retractall(GraspConnection, _, _).
 

@@ -55,7 +55,7 @@
     
     <owl:ObjectProperty rdf:about="http://knowrob.org/kb/knowrob_assembly.owl#partOccludedBy">
         <owl:propertyChainAxiom rdf:parseType="Collection">
-            <rdf:Description rdf:about="http://knowrob.org/kb/knowrob_assembly.owl#hasAffordance"/>
+            <rdf:Description rdf:about="http://knowrob.org/kb/knowrob.owl#hasAffordance"/>
             <rdf:Description>
                 <owl:inverseOf rdf:resource="http://knowrob.org/kb/knowrob_kautham.owl#atomicPartOccludesGraspingAffordance"/>
             </rdf:Description>
