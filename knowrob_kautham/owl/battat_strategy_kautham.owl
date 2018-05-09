@@ -11,7 +11,7 @@
      xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
      xmlns:computable="http://knowrob.org/kb/computable.owl#">
     <owl:Ontology rdf:about="http://knowrob.org/kb/battat_strategy_kautham.owl">
-        <owl:imports rdf:resource="package://knowrob_assembly/owl/battat_strategy.owl"/>
+        <owl:imports rdf:resource="package://knowrob_kautham/owl/battat_strategy.owl"/>
         <owl:imports rdf:resource="package://knowrob_kautham/owl/battat_airplane_simulation.owl"/>
     </owl:Ontology>
     
