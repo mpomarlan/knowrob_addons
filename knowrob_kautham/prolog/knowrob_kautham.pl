@@ -173,6 +173,11 @@ get_grasp_transform(GraspSpecification, [GTx, GTy, GTz, GRx, GRy, GRz, GRw]) :-
   rdf_vector_prolog(GraspTranslation, [GTx, GTy, GTz]),
   rdf_vector_prolog(GraspRotation, [GRx, GRy, GRz, GRw]).
 
+%% comp_affordanceocclusion(?Part, +Affordance)
+comp_affordanceocclusion(Part, GraspingAffordance) :-
+  writeln('comp_affordanceocclusion/2 called'),
+  fail.
+
 %% comp_affordanceocclusion(?Part, +Affordance, +ArmName)
 %
 comp_affordanceocclusion(Part, GraspingAffordance, ArmName) :-
@@ -255,7 +260,7 @@ kautham_assembly_apply_grasp(GraspedObject, Gripper, GraspSpec) :-
   format("    ~w~n", [DirtyUnconnected]),
   % invert the transform topology along the parent frame relation.
   % GraspedObject is then reference of all phsically connected parts
-  assemblage_part_make_reference(GraspedObject, Parents),
+  %assemblage_part_make_reference(GraspedObject, Parents),
   format(" Parents from make reference~n    ~w~n", [Parents]),
   % apply grasp transform on grasped object
   belief_at_internal(GraspedObject, TransformData, Gripper),
@@ -263,9 +268,9 @@ kautham_assembly_apply_grasp(GraspedObject, Gripper, GraspSpec) :-
   findall(X, ( member(X, [GraspedObject|Parents]) ;
     ( member(List, DirtyUnconnected), member(X,List) )), Dirty),
   format(" Dirty~n    ~w~n", [Dirty]),
-  belief_republish_objects(Dirty),
+  belief_republish_objects(Dirty), !.
   % assert temporary connections that consume affordances blocked by the grasp
-  kautham_assembly_block_grasp_affordances(GraspedAffordance).
+  %kautham_assembly_block_grasp_affordances(GraspedAffordance).
 
 kautham_assembly_apply_ungrasp(GraspedObject, Gripper, GraspSpec) :-
   %%%% input checking
@@ -286,9 +291,9 @@ kautham_assembly_apply_ungrasp(GraspedObject, Gripper, GraspSpec) :-
   sleep(1.0),
     kautham_get_global_pose(GraspedObject, [[Tx, Ty, Tz], [Rx, Ry, Rz, Rw]]),
     belief_at_update(GraspedObject, ([Tx,Ty,Tz], [Rx,Ry,Rz,Rw]))
-  ) ; true ),
+  ) ; true ), !.
   % retract temporary connections that consume affordances blocked by the grasp
-  kautham_assembly_unblock_grasp_affordances(GraspedAffordance).
+  %kautham_assembly_unblock_grasp_affordances(GraspedAffordance).
 
 kautham_assembly_block_grasp_affordances(GraspedAffordance) :-
   % block the affordance that is grasped
