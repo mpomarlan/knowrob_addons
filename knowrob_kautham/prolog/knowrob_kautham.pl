@@ -246,6 +246,7 @@ kautham_assembly_apply_grasp(GraspedObject, Gripper, GraspSpec) :-
   rdf_has(GraspSpec, knowrob_paramserver:'hasGraspTransform', TransformId),
   transform_data(TransformId, TransformData),
   % retract connections to fixed objects
+  kautham_get_global_pose(GraspedObject, ObjectMapData),
   assemblage_remove_fixtures(GraspedObject),
   % there could be objects with transforms not connected to GraspedObject.
   % find the physical bridges to tf unconnected objects and make
@@ -258,17 +259,21 @@ kautham_assembly_apply_grasp(GraspedObject, Gripper, GraspSpec) :-
   format(" Parents from make reference~n    ~w~n", [Parents]),
   % apply grasp transform on grasped object
   belief_at_internal(GraspedObject, TransformData, Gripper),
-  % accumulate list of dirty objects and cause beliefstate to republich TF frames
+  % accumulate list of dirty objects and cause beliefstate to republish TF frames
   findall(X, ( member(X, [GraspedObject|Parents]) ;
     ( member(List, DirtyUnconnected), member(X,List) )), Dirty),
   format(" Dirty~n    ~w~n", [Dirty]),
   belief_republish_objects(Dirty),
   % assert temporary connections that consume affordances blocked by the grasp
-  kautham_assembly_block_grasp_affordances(GraspedObject, GraspedAffordance, GraspSpec).
+  kautham_assembly_block_grasp_affordances(GraspedAffordance).
 
 kautham_assembly_apply_ungrasp(GraspedObject, Gripper, GraspSpec) :-
   %%%% input checking
   ground(GraspedObject), ground(Gripper), ground(GraspSpec),
+  once((
+    rdf_has(GraspedObject, knowrob:'hasAffordance', GraspedAffordance),
+    owl_has(GraspedAffordance, knowrob_assembly:'graspAt', GraspSpec)
+  )),
   assemblage_mechanical_part(GraspedObject),
   rdf_has(Gripper, knowrob:'frameName', literal(_)),
   format("APPLY-UNGRASP~n"),
@@ -276,25 +281,22 @@ kautham_assembly_apply_ungrasp(GraspedObject, Gripper, GraspSpec) :-
   format("    ~a~n", [GraspSpec]),
   %%%%
   % make GraspedObject absolute if still relative to gripper
-  rdf_has(GraspedObject, knowrob_paramserver:'hasTransform', TransformId),
+  rdf_has(GraspedObject, knowrob:'pose', TransformId),
   ( rdf_has(TransformId, knowrob:'relativeTo', Gripper) -> (
-format("Clear griprel transform"),
-    rdf_has(GraspedObject, knowrob:'frameName', literal(ObjFrame)),
-format("  ~a~n", ObjFrame),
-    % FIXME: hardcoded map frame name
-    get_current_tf('map', ObjFrame, Tx,Ty,Tz, Rx,Ry,Rz,Rw),
+  sleep(1.0),
+    kautham_get_global_pose(GraspedObject, [[Tx, Ty, Tz], [Rx, Ry, Rz, Rw]]),
     belief_at_update(GraspedObject, ([Tx,Ty,Tz], [Rx,Ry,Rz,Rw]))
   ) ; true ),
   % retract temporary connections that consume affordances blocked by the grasp
-  kautham_assembly_unblock_grasp_affordances(GraspedObject, GraspedAffordance, GraspSpec).
+  kautham_assembly_unblock_grasp_affordances(GraspedAffordance).
 
-kautham_assembly_block_grasp_affordances(GraspedObject, GraspedAffordance, GraspSpec) :-
+kautham_assembly_block_grasp_affordances(GraspedAffordance) :-
   % block the affordance that is grasped
   rdf_instance_from_class(knowrob_assembly:'GraspingConnection', GraspConnection),
   format(" New individual ~a~n", [GraspConnection]),
   rdf_assert(GraspConnection, knowrob_assembly:'consumesAffordance', GraspedAffordance).
 
-kautham_assembly_unblock_grasp_affordances(GraspedObject, GraspedAffordance, GraspSpec) :-
+kautham_assembly_unblock_grasp_affordances(GraspedAffordance) :-
   rdf_has(GraspConnection, knowrob_assembly:'consumesAffordance', GraspedAffordance),
   rdfs_individual_of(GraspConnection, knowrob_assembly:'GraspingConnection'),
   rdf_retractall(GraspConnection, _, _).
