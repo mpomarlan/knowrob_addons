@@ -252,7 +252,7 @@ kautham_assembly_apply_grasp(GraspedObject, Gripper, GraspSpec) :-
   transform_data(TransformId, TransformData),
   % retract connections to fixed objects
   kautham_get_global_pose(GraspedObject, ObjectMapData),
-  assemblage_remove_fixtures(GraspedObject),
+  %assemblage_remove_fixtures(GraspedObject),
   % there could be objects with transforms not connected to GraspedObject.
   % find the physical bridges to tf unconnected objects and make
   % tf unconnected objects transforms relative to the bridge.
@@ -260,7 +260,7 @@ kautham_assembly_apply_grasp(GraspedObject, Gripper, GraspSpec) :-
   format("    ~w~n", [DirtyUnconnected]),
   % invert the transform topology along the parent frame relation.
   % GraspedObject is then reference of all phsically connected parts
-  %assemblage_part_make_reference(GraspedObject, Parents),
+  assemblage_part_make_reference(GraspedObject, Parents),
   format(" Parents from make reference~n    ~w~n", [Parents]),
   % apply grasp transform on grasped object
   belief_at_internal(GraspedObject, TransformData, Gripper),
