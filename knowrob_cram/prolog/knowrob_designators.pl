@@ -59,7 +59,7 @@
 :- use_module(library('semweb/rdfs')).
 :- use_module(library('semweb/owl')).
 :- use_module(library('semweb/owl_parser')).
-:- use_module(library('knowrob/comp_temporal')).
+:- use_module(library('knowrob/temporal')).
 :- use_module(library('knowrob/computable')).
 :- use_module(library('knowrob/mongo')).
 :- use_module(library('knowrob/objects')).
@@ -96,7 +96,7 @@ log_publisher(Pbl) :-
     log_pbl(fail),
     jpl_new('org.knowrob.cram.LogdataPublisher', [], Pbl),
     jpl_list_to_array(['org.knowrob.cram.LogdataPublisher'], Arr),
-    jpl_call('org.knowrob.utils.ros.RosUtilities', runRosjavaNode, [Pbl, Arr], _),
+    jpl_call('org.knowrob.cram.LogdataPublisher', runNode, [Pbl, Arr], _),
     retract(log_pbl(fail)),
     assert(log_pbl(Pbl)),!.
 log_publisher(Pbl) :-

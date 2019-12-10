@@ -62,9 +62,9 @@
 :- use_module(library('semweb/owl')).
 :- use_module(library('semweb/owl_parser')).
 :- use_module(library('knowrob/computable')).
-:- use_module(library('knowrob/comp_temporal')).
+:- use_module(library('knowrob/temporal')).
 :- use_module(library('knowrob/mongo')).
-:- use_module(library('knowrob/srdl2')).
+:- use_module(library('srdl')).
 :- use_module(library('lists')).
 
 :- rdf_db:rdf_register_ns(knowrob, 'http://knowrob.org/kb/knowrob.owl#',  [keep(true)]).
@@ -86,7 +86,7 @@ video_interface(V) :-
     vid_interface(fail),
     jpl_new('org.knowrob.video.VideoFactory', [], V),
     jpl_list_to_array(['org.knowrob.video.VideoFactory'], Arr),
-    jpl_call('org.knowrob.utils.ros.RosUtilities', runRosjavaNode, [V, Arr], _),
+    jpl_call('org.knowrob.cram.LogdataPublisher', runNode, [V, Arr], _),
     retract(vid_interface(fail)),
     assert(vid_interface(V)),!.
 video_interface(V) :-
@@ -187,7 +187,7 @@ publish_background(T) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 experiment_videos(Category, Experiment, VideoURLs) :-
-    jpl_call('org.knowrob.cram.LogdataPublisher', 'getVideoURLs', [Category,Experiment], AddressJava),
+    jpl_call('org.knowrob.video.VideoFactory', 'getVideoURLs', [Category,Experiment], AddressJava),
     jpl_array_to_list(AddressJava, VideoURLs).
 
 experiment_videos(ExpName, VideaoURLs) :-

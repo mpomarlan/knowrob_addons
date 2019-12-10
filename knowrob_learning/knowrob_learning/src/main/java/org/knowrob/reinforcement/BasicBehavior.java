@@ -3,6 +3,8 @@ package org.knowrob.reinforcement;
 import java.lang.Thread;
 import java.util.Date;
 
+import com.google.common.collect.Lists;
+
 import geometry_msgs.TransformStamped;
 
 import org.ros.exception.RemoteException;
@@ -13,6 +15,10 @@ import org.ros.node.AbstractNodeMain;
 import org.ros.node.ConnectedNode;
 import org.ros.node.service.ServiceClient;
 import org.ros.node.service.ServiceResponseListener;
+import org.ros.node.NodeConfiguration;
+import org.ros.node.NodeMainExecutor;
+import org.ros.node.DefaultNodeMainExecutor;
+import org.ros.internal.loader.CommandLineLoader;
 	
 import burlap.behavior.policy.GreedyQPolicy;
 import burlap.behavior.policy.Policy;
@@ -62,9 +68,6 @@ import burlap.statehashing.simple.SimpleHashableStateFactory;
 import burlap.visualizer.Visualizer;
 import burlap.mdp.singleagent.SADomain;
 
-
-import org.knowrob.utils.ros.RosUtilities;
-
 import java.awt.*;
 import java.util.List;
 
@@ -101,7 +104,7 @@ public class BasicBehavior extends AbstractNodeMain
 		env = new KitchenEnvironment(0.5, 0.05, 0.0, 0.5, 0.05, 0.0);
 		String[] arg = new String[1];
 		arg[0] = "org.knowrob.reinforcement.KitchenEnvironment";
-		RosUtilities.runRosjavaNode(env, arg);
+		runNode(env, arg);
 		env.setTF(tf);
 		try
 		{
@@ -155,4 +158,12 @@ public class BasicBehavior extends AbstractNodeMain
 	    return dt.getTime()/1000.0;
 	}
 		
+    
+    public static void runNode(AbstractNodeMain node, String[] args) {
+        CommandLineLoader loader = new CommandLineLoader(Lists.newArrayList(args));
+        NodeConfiguration nodeConfiguration = loader.build();
+
+        NodeMainExecutor nodeMainExecutor = DefaultNodeMainExecutor.newDefault();
+        nodeMainExecutor.execute(node, nodeConfiguration);
+    }
 }

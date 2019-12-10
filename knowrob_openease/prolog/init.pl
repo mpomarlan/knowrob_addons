@@ -32,24 +32,25 @@
 
 :- register_ros_package(knowrob_common).
 :- register_ros_package(knowrob_mongo).
-:- register_ros_package(comp_temporal).
 :- register_ros_package(knowrob_vis).
 :- register_ros_package(knowrob_cram).
-:- register_ros_package(knowrob_srdl).
+:- register_ros_package(srdl).
 
 :- register_ros_package(knowrob_openease).
+:- use_module(library('openease')).
 :- use_module(library('openease_video')).
 :- use_module(library('openease_tasktree')).
 :- use_module(library('teaching')).
+:- use_module(library('editor')).
 
 %Extended ontology
 %:- owl_parser:owl_parse('package://knowrob_saphari/owl/saphari.owl').
 %:- rdf_db:rdf_register_ns(saphari, 'http://knowrob.org/kb/saphari.owl#', [keep(true)]).
 
-%:- owl_parser:owl_parse('package://knowrob_srdl/owl/openni_human1.owl').
+%:- owl_parser:owl_parse('package://srdl/owl/openni_human1.owl').
 %:- rdf_db:rdf_register_ns(openni_human, 'http://knowrob.org/kb/openni_human1.owl#', [keep(true)]).
 
-%:- owl_parser:owl_parse('package://knowrob_srdl/owl/Boxy.owl').
+%:- owl_parser:owl_parse('package://srdl/owl/Boxy.owl').
 %:- rdf_db:rdf_register_ns(boxy, 'http://knowrob.org/kb/Boxy.owl#', [keep(true)]).
 
 %:- rdf_db:rdf_register_ns(saphari_map, 'http://knowrob.org/kb/saphari_map.owl#', [keep(true)]).

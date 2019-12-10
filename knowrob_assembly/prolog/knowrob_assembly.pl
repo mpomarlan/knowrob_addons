@@ -52,14 +52,17 @@
         assemblage_part_connect_transforms/2,
         assemblage_part_make_reference/2,
         assemblage_remove_fixtures/1,
-        subassemblage/2
+        assemblage_linksAssemblage_restriction/2,
+        assemblage_linkedByAssemblage_restriction/2,
+        subassemblage/2,
+        assemblage_connection_affordance/2
     ]).
 
 :- use_module(library('semweb/rdf_db')).
 :- use_module(library('semweb/rdfs')).
 :- use_module(library('semweb/owl')).
 :- use_module(library('semweb/owl_parser')).
-:- use_module(library('knowrob/owl')).
+:- use_module(library('knowrob/knowrob')).
 :- use_module(library('knowrob/beliefstate')).
 :- use_module(library('knowrob/transforms')).
 :- use_module(library('knowrob_planning')).
@@ -91,6 +94,9 @@
       assemblage_part_connect_transforms(r,-),
       assemblage_part_make_reference(r,t),
       assemblage_remove_fixtures(r),
+      assemblage_linksAssemblage_restriction(r,r),
+      assemblage_linkedByAssemblage_restriction(r,r),
+      assemblage_connection_affordance(r,r),
       subassemblage(r,r).
 
 
@@ -166,7 +172,7 @@ assemblage_destroy(Connection) :-
   assemblage_destroy_connection(Connection).
 
 assemblage_destroy_connection(Connection) :-
-  write('[assembly] detach: '), owl_write_readable(Connection), nl,
+  write('[assembly] detach: '), print(Connection), nl,
   rdf_retractall(_,_,Connection),
   rdf_retractall(Connection,_,_).
 
@@ -174,21 +180,25 @@ assemblage_destroy_connection(Connection) :-
 %
 assemblage_connection_create(ConnType, Objects, ConnId) :-
   rdf_instance_from_class(ConnType, ConnId),
-  forall((
-    rdfs_subclass_of(ConnType,Restr),
-    rdfs_individual_of(Restr,owl:'Restriction'),
-    rdf_has(Restr, owl:onProperty, knowrob_assembly:'consumesAffordance'),
-    rdf_has(Restr, owl:'onClass', AffType)),once(((
+  forall(
+    assemblage_connection_affordance(ConnId,AffType),
+    once(((
       member(Obj,Objects),
       rdf_has(Obj, knowrob:'hasAffordance', Affordance),
       rdfs_individual_of(Affordance, AffType),
       rdf_assert(ConnId, knowrob_assembly:'consumesAffordance', Affordance)
     ) ; (
-      write('[ERR] Create '), owl_write_readable(ConnType),
-      write(': affordance '), owl_write_readable(AffType), write(' missing.'), nl,
+      write('[ERR] Create '), print(ConnType),
+      write(': affordance '), print(AffType), write(' missing.'), nl,
       rdf_retractall(ConnId,_,_),
       fail
     )))).
+
+assemblage_connection_affordance(Connection,AffordanceConcept) :-
+  rdfs_individual_of(Connection,Restr),
+  rdfs_individual_of(Restr,owl:'Restriction'),
+  rdf_has(Restr, owl:onProperty, knowrob_assembly:'consumesAffordance'),
+  rdf_has(Restr, owl:'onClass', AffordanceConcept).
 
 %% assemblage_remove_fixtures(+Part) is det.
 %
@@ -229,15 +239,39 @@ assemblage_linksAssemblage(Assemblage, Linked) :-
   member(Linked, Links_set).
 
 assemblage_linksAssemblage_restriction(Assemblage, ChildAssemblageType) :-
+  rdfs_individual_of(Assemblage, owl:'Class'),!,
+  rdfs_subclass_of(Assemblage, Restr),
+  assemblage_linksAssemblage_restriction_(Restr, ChildAssemblageType).
+
+assemblage_linksAssemblage_restriction(Assemblage, ChildAssemblageType) :-
   rdfs_individual_of(Assemblage, Restr),
+  assemblage_linksAssemblage_restriction_(Restr, ChildAssemblageType).
+
+assemblage_linksAssemblage_restriction_(Restr, ChildAssemblageType) :-
   rdfs_individual_of(Restr, owl:'Restriction'),
   rdf_has(Restr, owl:'onProperty', knowrob_assembly:'usesConnection'),
+  % TODO: do not ignore cardinality
   owl_restriction(Restr, restriction(_, cardinality(_,_,Descr))),
   owl_description(Descr, Descr_x),
   ( Descr_x = restriction('http://knowrob.org/kb/knowrob_assembly.owl#linksAssemblage', some_values_from(ChildAssemblageType)) ; (
     Descr_x = intersection_of(List),
     member(restriction('http://knowrob.org/kb/knowrob_assembly.owl#linksAssemblage', some_values_from(ChildAssemblageType)), List)
   )).
+
+assemblage_linkedByAssemblage_restriction(Assemblage, ChildAssemblageType) :-
+  rdfs_individual_of(Assemblage, owl:'Class'),!,
+  rdfs_subclass_of(Assemblage, Restr),
+  assemblage_linkedByAssemblage_restriction_(Restr, ChildAssemblageType).
+
+assemblage_linkedByAssemblage_restriction(Assemblage, ChildAssemblageType) :-
+  rdfs_individual_of(Assemblage, Restr),
+  assemblage_linkedByAssemblage_restriction_(Restr, ChildAssemblageType).
+
+assemblage_linkedByAssemblage_restriction_(Restr, ChildAssemblageType) :-
+  rdfs_individual_of(Restr, owl:'Restriction'),
+  rdf_has(Restr, owl:'onProperty', knowrob_assembly:'linkedByAssemblage'),
+  % TODO: do not ignore cardinality
+  owl_restriction(Restr, restriction(_, cardinality(_,_,ChildAssemblageType))).
 
 %% assemblage_graspable_part(+Assemblage,+Part) is det.
 %
@@ -365,8 +399,21 @@ assemblage_connection_transform(Connection, PrimaryObject, [TargetFrame,RefFrame
 %
 assemblage_connection_reference(_Connection, TransformId, ReferenceObj) :-
   rdf_has(TransformId, knowrob:'relativeTo', ReferenceObj), !.
+
+
+assemblage_connection_reference(Parts, TransformId, ReferenceObj) :-
+  % FIXME: won't work when multiple instances of the reference object class are linked in the connection
+  is_list(Parts),!,
+  rdfs_individual_of(TransformId, Restr),
+  rdfs_individual_of(Restr, owl:'Restriction'),
+  rdf_has(Restr, owl:'onProperty', knowrob:'relativeTo'),
+  rdf_has(Restr, owl:'onClass', ReferenceCls),
+  member(ReferenceObj,Parts),
+  owl_individual_of(ReferenceObj,ReferenceCls), !.
+  
 assemblage_connection_reference(Connection, TransformId, ReferenceObj) :-
   % FIXME: won't work when multiple instances of the reference object class are linked in the connection
+  atom(Connection),
   rdfs_individual_of(TransformId, Restr),
   rdfs_individual_of(Restr, owl:'Restriction'),
   rdf_has(Restr, owl:'onProperty', knowrob:'relativeTo'),
@@ -380,8 +427,12 @@ assemblage_connection_reference(Connection, TransformId, ReferenceObj) :-
 assemblage_part_make_reference(RefObj, OldParents) :-
   assemblage_transform_parents(RefObj, ChildParentTuples, []),
   findall( Parent, (
-           member((Child,Parent), ChildParentTuples),
-           belief_at_invert_topology(Child,Parent) ), OldParents).
+    member((Child,Parent), ChildParentTuples),
+    belief_at_id(Child,Pose),
+    transform_invert(Pose,Pose_inv),
+    belief_at_update(Parent,Pose_inv)
+    %belief_at_invert_topology(Child,Parent)
+  ), OldParents).
 
 assemblage_transform_parents(Child, [(Child,Parent)|Rest], Blacklist) :-
   \+ member(Child, Blacklist),

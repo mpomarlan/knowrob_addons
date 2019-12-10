@@ -61,7 +61,7 @@ define_goal(reach(GoalPositionX, GoalPositionY, GoalPositionZ), Offset, JavaList
    jpl_new('org.knowrob.reinforcement.KitchenEnvironment', [GoalPositionX, GoalPositionY, GoalPositionZ, GoalPositionX, GoalPositionY, GoalPositionZ], KitchenEnv),
    ArgList = ['org.knowrob.reinforcement.KitchenEnvironment'],
    jpl_new( '[Ljava.lang.String;', ArgList, Arg),
-   jpl_call('org.knowrob.utils.ros.RosUtilities', 'runRosjavaNode', [KitchenEnv, Arg], _X),
+   jpl_call('org.knowrob.reinforcement.BasicBehavior', 'runNode', [KitchenEnv, Arg], _X),
    jpl_call(KitchenEnv, 'setTF', [KitchenTf], _Y),
    jpl_call(KitchenEnv, 'sleep', [5000], _Z),
    JavaListMap = [KitchenTf, KitchenEnv].
